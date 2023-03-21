@@ -4,6 +4,9 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 const https = require('https');
 
+const csrf = require('csurf');
+const csrfProtection = csrf({ cookie: true });
+
 const app = express();
 
 dotenv.config();
@@ -22,10 +25,13 @@ const initOpenIDClient = async () => {
 
 // const client = await initOpenIDClient();
 
-app.get('/', (req, res) => {
+app.get('/login', csrfProtection, (req, res) => {
+  const state = req.csrfToken();
   const authorizationUrl = client.authorizationUrl({
     scope: 'openid email profile',
-    state: 'state',
+    state,
+    code_challenge_method: 'S256',
+    code_challenge: client.generateCodeVerifier(),
   });
   res.redirect(authorizationUrl);
 });
@@ -39,6 +45,16 @@ app.get('/login.callback', async (req, res) => {
   );
   const { email, name } = tokenSet.claims();
   res.send(`Welcome ${name} (${email})`);
+  res.send(`Welcome ${tokenSet}`);
+});
+
+// Implement the check.state function
+app.use((err, req, res, next) => {
+  if (err.code !== 'EBADCSRFTOKEN') return next(err);
+
+  // handle CSRF token errors here
+  res.status(403);
+  res.send('Invalid CSRF token');
 });
 
 // const PORT = process
