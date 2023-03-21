@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
   res.redirect(authorizationUrl);
 });
 
-app.get('/login/callback', async (req, res) => {
+app.get('/login.callback', async (req, res) => {
   const params = client.callbackParams(req);
   const tokenSet = await client.callback(
     process.env.REDIRECT_URI,
