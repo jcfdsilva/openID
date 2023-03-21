@@ -9,8 +9,6 @@ const app = express();
 
 dotenv.config();
 
-// const codeVerifier = crypto.randomBytes(16).toString('base64');
-// const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64');
 const codeVerifier = crypto.randomBytes(16).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64').toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 
@@ -26,8 +24,6 @@ const initOpenIDClient = async () => {
   });
   return client;
 };
-
-// const client = await initOpenIDClient();
 
 app.get('/', (req, res) => {
   const state = 'random-state-value';
@@ -48,19 +44,15 @@ app.get('/login.callback', async (req, res) => {
     params,
     { code_verifier: codeVerifier, state },
   );
-  const { email, name } = tokenSet.claims();
-  res.send(`Welcome ${name} (${email})`);
+  const pers = tokenSet.claims();
+  res.send(`Welcome ${pers.name} (${pers.preferred_username})`);
 });
 
-// const PORT = process
 let client = null;
 
 const init = async () => {
   client = await initOpenIDClient();
   const PORT = process.env.PORT || 433;
-  // app.listen(PORT, () => {
-  //   console.log(`Server listening on port ${PORT}`);
-  // });
   const options = {
     key: fs.readFileSync(process.env.KEY_PATH),
     cert: fs.readFileSync(process.env.CERT_PATH)
