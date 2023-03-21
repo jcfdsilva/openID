@@ -3,13 +3,14 @@ const { Issuer, custom } = require('openid-client');
 const fs = require('fs');
 const dotenv = require('dotenv');
 const https = require('https');
-
-const csrf = require('csurf');
-const csrfProtection = csrf({ cookie: true });
+const crypto = require('crypto');
 
 const app = express();
 
 dotenv.config();
+
+const codeVerifier = crypto.randomBytes(32).toString('base64');
+const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64');
 
 const initOpenIDClient = async () => {
   const issuer = await Issuer.discover(process.env.ISSUER);
@@ -25,36 +26,28 @@ const initOpenIDClient = async () => {
 
 // const client = await initOpenIDClient();
 
-app.get('/login', csrfProtection, (req, res) => {
-  const state = req.csrfToken();
+app.get('/', (req, res) => {
+  const state = 'random-state-value';
   const authorizationUrl = client.authorizationUrl({
     scope: 'openid email profile',
-    state,
+    code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    code_challenge: client.generateCodeVerifier(),
+    state:state
   });
   res.redirect(authorizationUrl);
 });
 
 app.get('/login.callback', async (req, res) => {
   const params = client.callbackParams(req);
+  const state = params.state;
   const tokenSet = await client.callback(
     process.env.REDIRECT_URI,
     params,
-    { code_verifier: 'default' },
+    { code_verifier: codeVerifier, state },
   );
-  const { email, name } = tokenSet.claims();
-  res.send(`Welcome ${name} (${email})`);
-  res.send(`Welcome ${tokenSet}`);
-});
-
-// Implement the check.state function
-app.use((err, req, res, next) => {
-  if (err.code !== 'EBADCSRFTOKEN') return next(err);
-
-  // handle CSRF token errors here
-  res.status(403);
-  res.send('Invalid CSRF token');
+  // const { email, name } = tokenSet.claims();
+  // res.send(`Welcome ${name} (${email})`);
+  res.send(`Welcome ${JSON.stringify(params)}`);
 });
 
 // const PORT = process
