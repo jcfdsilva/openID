@@ -9,8 +9,11 @@ const app = express();
 
 dotenv.config();
 
-const codeVerifier = crypto.randomBytes(32).toString('base64');
-const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64');
+// const codeVerifier = crypto.randomBytes(16).toString('base64');
+// const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64');
+const codeVerifier = crypto.randomBytes(16).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64').toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
 
 const initOpenIDClient = async () => {
   const issuer = await Issuer.discover(process.env.ISSUER);
@@ -45,9 +48,8 @@ app.get('/login.callback', async (req, res) => {
     params,
     { code_verifier: codeVerifier, state },
   );
-  // const { email, name } = tokenSet.claims();
-  // res.send(`Welcome ${name} (${email})`);
-  res.send(`Welcome ${JSON.stringify(params)}`);
+  const { email, name } = tokenSet.claims();
+  res.send(`Welcome ${name} (${email})`);
 });
 
 // const PORT = process
